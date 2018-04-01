@@ -5,113 +5,99 @@
 #include "mproc.h"
 #include "param.h"
 
-/*
- ******************************************************************************
- *                           University of Groningen                          * 
- * AUTHORS: Barnabas Busa, Charles Randolph, Joe Jones.                       *
- ******************************************************************************
-*/
+#define SECS_IN_DAY    (24 * 3600)
+#define DAYS_IN_YEAR   365
 
-#define EPOCH           1970
-#define SEC_PER_DAY     (24 * 3600)
-#define DAYS_PER_YEAR   365
-#define MAX_LEAPS       49
-
-int leaps[MAX_LEAPS][2] = {
-    {+0, +0},           // 1970
-    {+0, +0},           // 1971
-    {-1, -1},           // 1972
-    {+0, -1},           // 1973
-    {+0, -1},           // 1974
-    {+0, -1},           // 1975
-    {+0, -1},           // 1976
-    {+0, -1},           // 1977
-    {+0, -1},           // 1978
-    {+0, -1},           // 1979
-    {+0, +0},           // 1980
-    {-1, +0},           // 1981
-    {-1, +0},           // 1982
-    {-1, +0},           // 1983
-    {+0, +0},           // 1984
-    {-1, +0},           // 1985
-    {+0, +0},           // 1986
-    {+0, -1},           // 1987
-    {+0, +0},           // 1988
-    {+0, -1},           // 1989
-    {+0, -1},           // 1990
-    {+0, +0},           // 1991
-    {-1, +0},           // 1992
-    {-1, +0},           // 1993
-    {-1, +0},           // 1994
-    {+0, -1},           // 1995
-    {+0, +0},           // 1996
-    {-1, +0},           // 1997
-    {+0, -1},           // 1998
-    {+0, +0},           // 1999
-    {+0, +0},           // 2000
-    {+0, +0},           // 2001
-    {+0, +0},           // 2002
-    {+0, +0},           // 2003
-    {+0, +0},           // 2004
-    {+0, -1},           // 2005
-    {+0, +0},           // 2006
-    {+0, +0},           // 2007
-    {+0, -1},           // 2008
-    {+0, +0},           // 2009
-    {+0, +0},           // 2010
-    {+0, +0},           // 2011
-    {-1, +0},           // 2012
-    {+0, +0},           // 2013
-    {+0, +0},           // 2014
-    {-1, +0},           // 2015
-    {+0, -1},           // 2016
-    {+0, +0},           // 2017
-    {+0, +0},           // 2018
+int cumulativeLeaps[49][2] = {
+    {0,0}, //1970
+    {0,0}, //1971
+    {1,2}, //1972
+    {2,3}, //1973
+    {3,4}, //1974
+    {4,5}, //1975
+    {5,6}, //1976
+    {6,7}, //1977
+    {7,8}, //1978
+    {8,9}, //1979
+    {9,9}, //1980
+    {10,10}, //1981
+    {11,11}, //1982
+    {12,12}, //1983
+    {12,12}, //1984
+    {13,13}, //1985
+    {13,13}, //1986
+    {13,14}, //1987
+    {14,14}, //1988
+    {14,15}, //1989
+    {15,16}, //1990
+    {16,16}, //1991
+    {17,17}, //1992
+    {18,18}, //1993
+    {19,19}, //1994
+    {19,20}, //1995
+    {20,20}, //1996
+    {21,21}, //1997
+    {21,22}, //1998
+    {22,22}, //1999
+    {22,22}, //2000
+    {22,22}, //2001
+    {22,22}, //2002
+    {22,22}, //2003
+    {22,22}, //2004
+    {22,23}, //2005
+    {23,23}, //2006
+    {23,23}, //2007
+    {23,24}, //2008
+    {24,24}, //2009
+    {24,24}, //2010
+    {24,24}, //2011
+    {25,25}, //2012
+    {25,25}, //2013
+    {25,25}, //2014
+    {26,26}, //2015
+    {26,27}, //2016
+    {27,27}, //2017
+    {27,27}, //2018
 };
 
-/* Returns one if the year is a leap year. Otherwise zero. */
-static int isLeap (int y) {
-    if ((y % 400) == 0) return 1;
-    if ((y % 100) == 0) return 0;
-    return ((y % 4) == 0);
+//Returns 1 is a year is a leap year
+static int isLeapYear (int x) {
+    if ((x%400) == 0) {
+        return 1;
+    } 
+    if ((x%100) == 0) {
+       return 0;
+    }
+    return ((x%4) == 0);
 }
 
-/* Returns the number of seconds in a given year. */
 static int secondsInYear (int y) {
-    return SEC_PER_DAY * (DAYS_PER_YEAR + isLeap(y));
+    return SECS_IN_DAY * (DAYS_IN_YEAR + isLeapYear(y));
 }
 
-/* Returns the number of leap seconds since the epoch, for given elapsed seconds. */
-static int leapSeconds (time_t elapsed) {
-   int y = EPOCH, n = 0;
-   while (y - EPOCH < (2 * MAX_LEAPS) && (elapsed - (secondsInYear(y) / 2)) > 0) {
-       n += leaps[(y - EPOCH) / 2][y % 2];
-       y++;
-       elapsed -= (secondsInYear(y) / 2);
-   }
-   return n;
+// Returns the number of seconds that have occured since 1970 given the unix time
+static int leapSecs (int unixTime) {
+    int leapSeconds = 0;
+    int year = 1970;
+    while (year < 2019 && unixTime > secondsInYear(year)) {
+        unixTime -= secondsInYear(year);
+        year++;
+    }
+    return cumulativeLeaps[year-1970][unixTime > secondsInYear(year)/2];
 }
 
-/* Returns the utc time given the current number of seconds since 1/1/1970 */
-static time_t toUTC (time_t elapsed) {
-    return elapsed + leapSeconds(elapsed);
-}
-
-/* Returns UNIX time adjusted for leap seconds */
 int do_utctime(void) {
     clock_t uptime, boottime;
     int s;
 
-    // Attempt to extract time.
+    //Get Time in seconds since 1970 - As in do_time()
     if ((s = getuptime2(&uptime, &boottime)) != OK) {
         panic("do_utctime couldn't get uptime: %d", s);
     }
+    time_t unixTime = (time_t)(boottime + (uptime/system_hz));
 
-    // Extract seconds since 1/1/1970.
-    time_t unix_time = (time_t)(boottime + (uptime/system_hz));
-
-    // Save adjusted time in message reply. 
-    mp->mp_reply.reply_time = toUTC(unix_time);
+    // Save time in message reply
+    mp->mp_reply.reply_time = unixTime + leapSecs(unixTime);
 
     return(OK);
 }

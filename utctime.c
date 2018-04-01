@@ -1,7 +1,3 @@
-/*
-utctime.c
-*/
-
 #include <stdio.h>
 #include <sys/cdefs.h>
 #include "namespace.h"
@@ -17,14 +13,14 @@ time_t utctime (time_t *tp) {
         return -1;
     }
 
-    // Extract time (m2_l1 is a long, so recast).
-    time_t utime = (time_t)m.m2_l1;
+    //Read utctime from the syscall message
+    time_t utctime = (time_t)m.m2_l1;
 
-    // If pointer is non-null, save it there too. 
+    // Save utctime in the pointer is it isn't NULL
     if (tp != NULL) {
-        *tp = utime;
+        *tp = utctime;
     }
 
     // Return result.
-    return utime;
+    return utctime;
 }
